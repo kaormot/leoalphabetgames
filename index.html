@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Leo Duke's Voice Phonics Studio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700;800&display=swap');
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+
+    body {
+      font-family: 'Fredoka', cursive, sans-serif;
+      background: linear-gradient(135deg, #FF9A9E 0%, #FECFEF 40%, #A1C4FD 70%, #C2E9FB 100%);
+      background-size: 300% 300%;
+      animation: gradientBG 15s ease infinite;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    @keyframes gradientBG {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .card-3d {
+      box-shadow: 0 10px 0px rgba(0,0,0,0.1), 0 15px 25px rgba(0,0,0,0.15);
+      transition: all 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .card-3d:active {
+      transform: translateY(6px) scale(0.95);
+      box-shadow: 0 4px 0px rgba(0,0,0,0.1), 0 5px 10px rgba(0,0,0,0.1);
+    }
+
+    @keyframes popBounce {
+      0% { transform: scale(1); }
+      40% { transform: scale(1.15) rotate(3deg); }
+      70% { transform: scale(0.95) rotate(-2deg); }
+      100% { transform: scale(1) rotate(0deg); }
+    }
+
+    .animating {
+      animation: popBounce 0.4s ease-out;
+    }
+
+    @keyframes pulseRec {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.08); background-color: #EF4444; }
+      100% { transform: scale(1); }
+    }
+
+    .recording-active {
+      animation: pulseRec 1s infinite;
+    }
+  </style>
+</head>
+<body class="flex flex-col items-center justify-between p-3 sm:p-6 text-gray-800 relative min-h-screen">
+
+  <!-- Header & Studio Mode Switcher -->
+  <header class="text-center my-2 sm:my-4 z-10 w-full max-w-2xl">
+    <div class="inline-block bg-white/90 backdrop-blur-md px-6 py-3 rounded-3xl shadow-xl border-4 border-yellow-300 transform -rotate-1">
+      <h1 id="appTitle" class="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-600 tracking-wide drop-shadow">
+        🎙️ Voice Studio Mode
+      </h1>
+      <p id="appSubtitle" class="text-xs sm:text-base font-extrabold text-indigo-500 mt-1">
+        Record your own real voice for each letter!
+      </p>
+    </div>
+
+    <!-- Toggle Button to Switch Mode -->
+    <div class="mt-4 flex justify-center gap-3">
+      <button id="modeToggleBtn" onclick="togglePlayMode()" class="bg-gradient-to-r from-emerald-400 to-green-500 hover:from-emerald-500 hover:to-green-600 text-white font-black text-lg px-8 py-3 rounded-2xl shadow-lg border-b-4 border-green-700 active:translate-y-1 transition">
+        🚀 Start Game Mode
+      </button>
+    </div>
+  </header>
+
+  <!-- Letter Grid A to Z -->
+  <main class="w-full max-w-5xl z-10 my-auto">
+    <div id="alphabetGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 p-2">
+      <!-- Cards rendered via JS -->
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="text-center my-3 z-10 text-xs sm:text-sm font-extrabold text-indigo-700 bg-white/60 backdrop-blur-sm px-5 py-2 rounded-full border-2 border-white shadow">
+    Made with ❤️ for <span class="text-pink-600 font-black">Leo Duke</span> 🎈
+  </footer>
+
+  <script>
+    const alphabet = [
+      { upper: 'A', lower: 'a', sound: '/Ah/', bg: 'from-pink-400 to-rose-400', border: 'border-pink-200' },
+      { upper: 'B', lower: 'b', sound: '/Buh/', bg: 'from-blue-400 to-indigo-400', border: 'border-blue-200' },
+      { upper: 'C', lower: 'c', sound: '/Kuh/', bg: 'from-amber-400 to-yellow-400', border: 'border-amber-200' },
+      { upper: 'D', lower: 'd', sound: '/Duh/', bg: 'from-orange-400 to-amber-500', border: 'border-orange-200' },
+      { upper: 'E', lower: 'e', sound: '/Eh/', bg: 'from-emerald-400 to-teal-500', border: 'border-emerald-200' },
+      { upper: 'F', lower: 'f', sound: '/Fff/', bg: 'from-cyan-400 to-sky-500', border: 'border-cyan-200' },
+      { upper: 'G', lower: 'g', sound: '/Guh/', bg: 'from-teal-400 to-emerald-500', border: 'border-teal-200' },
+      { upper: 'H', lower: 'h', sound: '/Huh/', bg: 'from-purple-400 to-indigo-500', border: 'border-purple-200' },
+      { upper: 'I', lower: 'i', sound: '/Ih/', bg: 'from-sky-400 to-blue-500', border: 'border-sky-200' },
+      { upper: 'J', lower: 'j', sound: '/Juh/', bg: 'from-orange-400 to-pink-500', border: 'border-orange-200' },
+      { upper: 'K', lower: 'k', sound: '/Kuh/', bg: 'from-violet-400 to-purple-500', border: 'border-violet-200' },
+      { upper: 'L', lower: 'l', sound: '/Luh/', bg: 'from-yellow-400 to-amber-500', border: 'border-yellow-200' },
+      { upper: 'M', lower: 'm', sound: '/Mmm/', bg: 'from-rose-400 to-pink-500', border: 'border-rose-200' },
+      { upper: 'N', lower: 'n', sound: '/Nnn/', bg: 'from-teal-400 to-cyan-500', border: 'border-teal-200' },
+      { upper: 'O', lower: 'o', sound: '/Oh/', bg: 'from-amber-400 to-orange-500', border: 'border-amber-200' },
+      { upper: 'P', lower: 'p', sound: '/Puh/', bg: 'from-pink-400 to-purple-400', border: 'border-pink-200' },
+      { upper: 'Q', lower: 'q', sound: '/Kwuh/', bg: 'from-fuchsia-400 to-pink-500', border: 'border-fuchsia-200' },
+      { upper: 'R', lower: 'r', sound: '/Rrr/', bg: 'from-red-400 to-rose-500', border: 'border-red-200' },
+      { upper: 'S', lower: 's', sound: '/Sss/', bg: 'from-yellow-400 to-lime-500', border: 'border-yellow-200' },
+      { upper: 'T', lower: 't', sound: '/Tuh/', bg: 'from-blue-400 to-teal-500', border: 'border-blue-200' },
+      { upper: 'U', lower: 'u', sound: '/Uh/', bg: 'from-indigo-400 to-purple-500', border: 'border-indigo-200' },
+      { upper: 'V', lower: 'v', sound: '/Vvv/', bg: 'from-emerald-400 to-lime-500', border: 'border-emerald-200' },
+      { upper: 'W', lower: 'w', sound: '/Wuh/', bg: 'from-cyan-400 to-blue-500', border: 'border-cyan-200' },
+      { upper: 'X', lower: 'x', sound: '/Kss/', bg: 'from-purple-400 to-pink-500', border: 'border-purple-200' },
+      { upper: 'Y', lower: 'y', sound: '/Yuh/', bg: 'from-lime-400 to-green-500', border: 'border-lime-200' },
+      { upper: 'Z', lower: 'z', sound: '/Zzz/', bg: 'from-slate-500 to-indigo-600', border: 'border-slate-300' }
+    ];
+
+    let recordedAudios = {}; 
+    let isPlayMode = false;  
+    let mediaRecorder = null;
+    let audioChunks = [];
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playPop() {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.frequency.setValueAtTime(450, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(750, audioCtx.currentTime + 0.08);
+      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.08);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.08);
+    }
+
+    function renderGrid() {
+      const grid = document.getElementById('alphabetGrid');
+      grid.innerHTML = '';
+
+      alphabet.forEach(item => {
+        const hasRecording = recordedAudios[item.upper];
+        const card = document.createElement('div');
+        card.className = `card-3d bg-gradient-to-br ${item.bg} border-4 ${item.border} rounded-3xl p-4 flex flex-col items-center justify-center cursor-pointer min-h-[130px] relative`;
+        
+        if (!isPlayMode) {
+          // STUDIO / RECORD MODE DESIGN
+          card.innerHTML = `
+            <div class="text-3xl sm:text-4xl font-black text-white drop-shadow leading-none mb-2">
+              ${item.upper}<span class="text-2xl sm:text-3xl opacity-90">${item.lower}</span>
+            </div>
+            <div class="flex gap-2 mt-1 w-full px-2">
+              <button id="rec-btn-${item.upper}" onclick="event.stopPropagation(); toggleRecord('${item.upper}')" class="flex-1 bg-red-500 hover:bg-red-600 text-white font-extrabold text-xs py-2 px-2 rounded-xl shadow border-2 border-white active:scale-95 transition">
+                🔴 ${hasRecording ? 'Re-rec' : 'Record'}
+              </button>
+              <button id="play-btn-${item.upper}" onclick="event.stopPropagation(); playVoice('${item.upper}')" ${hasRecording ? '' : 'disabled'} class="flex-1 bg-blue-500 hover:bg-blue-600 text-white font-extrabold text-xs py-2 px-2 rounded-xl shadow border-2 border-white active:scale-95 transition disabled:opacity-40 disabled:cursor-not-allowed">
+                ▶️ Test
+              </button>
+            </div>
+            ${hasRecording ? '<span class="absolute top-2 right-2 text-xs bg-green-500 text-white px-2 py-0.5 rounded-full font-bold shadow">Saved ✓</span>' : ''}
+          `;
+        } else {
+          // PLAY MODE DESIGN
+          card.innerHTML = `
+            <div class="text-5xl sm:text-6xl font-black text-white drop-shadow-md leading-none mb-1">
+              ${item.upper}<span class="text-4xl sm:text-5xl opacity-90">${item.lower}</span>
+            </div>
+            <div class="text-xs sm:text-sm font-extrabold text-white/90 bg-black/20 px-4 py-1 rounded-full mt-2 border border-white/20">
+              ${hasRecording ? '🔊 Tap to Listen!' : '⚠️ No Voice'}
+            </div>
+          `;
+          card.onclick = (e) => {
+            playPop();
+            triggerConfetti(e);
+            playVoice(item.upper);
+            card.classList.remove('animating');
+            void card.offsetWidth;
+            card.classList.add('animating');
+          };
+        }
+
+        grid.appendChild(card);
+      });
+    }
+
+    async function toggleRecord(letter) {
+      playPop();
+      const btn = document.getElementById(`rec-btn-${letter}`);
+      
+      if (!mediaRecorder || mediaRecorder.state === "inactive") {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          mediaRecorder = new MediaRecorder(stream);
+          audioChunks = [];
+
+          mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+          mediaRecorder.onstop = () => {
+            const blob = new Blob(audioChunks, { type: 'audio/mp3' });
+            recordedAudios[letter] = URL.createObjectURL(blob);
+            renderGrid();
+          };
+
+          mediaRecorder.start();
+          btn.textContent = "⏹️ Stop";
+          btn.classList.add('recording-active');
+        } catch (err) {
+          alert("Microphone access is required to record audio.");
+        }
+      } else {
+        mediaRecorder.stop();
+      }
+    }
+
+    function playVoice(letter) {
+      if (recordedAudios[letter]) {
+        const audio = new Audio(recordedAudios[letter]);
+        audio.play().catch(e => console.log("Audio play error"));
+      } else if (!isPlayMode) {
+        alert("No audio recorded for letter " + letter + " yet.");
+      }
+    }
+
+    function triggerConfetti(e) {
+      if (window.confetti) {
+        const x = e ? e.clientX / window.innerWidth : 0.5;
+        const y = e ? e.clientY / window.innerHeight : 0.5;
+        confetti({
+          particleCount: 20,
+          spread: 50,
+          origin: { x: x, y: y },
+          shapes: ['star', 'circle'],
+          colors: ['#FFD700', '#FF69B4', '#00BFFF', '#7B68EE']
+        });
+      }
+    }
+
+    function togglePlayMode() {
+      playPop();
+      isPlayMode = !isPlayMode;
+      const title = document.getElementById('appTitle');
+      const subtitle = document.getElementById('appSubtitle');
+      const toggleBtn = document.getElementById('modeToggleBtn');
+
+      if (isPlayMode) {
+        title.textContent = "🔤 Leo Duke's Phonics Game 🍎";
+        subtitle.textContent = "Tap a letter to hear the sound!";
+        toggleBtn.textContent = "⚙️ Voice Studio (Edit / Record)";
+        toggleBtn.className = "bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white font-black text-lg px-8 py-3 rounded-2xl shadow-lg border-b-4 border-orange-700 active:translate-y-1 transition";
+      } else {
+        title.textContent = "🎙️ Voice Studio Mode";
+        subtitle.textContent = "Record your own real voice for each letter!";
+        toggleBtn.textContent = "🚀 Start Game Mode";
+        toggleBtn.className = "bg-gradient-to-r from-emerald-400 to-green-500 hover:from-emerald-500 hover:to-green-600 text-white font-black text-lg px-8 py-3 rounded-2xl shadow-lg border-b-4 border-green-700 active:translate-y-1 transition";
+      }
+      renderGrid();
+    }
+
+    renderGrid();
+  </script>
+</body>
+</html>
